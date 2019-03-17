@@ -14,6 +14,7 @@ namespace RPSLS
             public Move FirstMoveToPlay { get; }
             public Move SecondMoveToPlay { get; }
             public int Probability { get; set; }
+            public float Weight { get; set; }
 
             private WinningScenario()
             {
@@ -68,8 +69,8 @@ namespace RPSLS
 
 
         //PROPERTIES
-        private const int MOVEBUFFERSIZE = 40;      // Circular array size
-        private const int SEARCHPATTERNSIZE = 30;       // Possible max pattern length
+        private const int MOVEBUFFERSIZE = 200;      // Circular array size
+        private const int SEARCHPATTERNSIZE = 40;       // Possible max pattern length
         private WinningScenario[] winningScenarios;
         private int moveCount;
         private CircularArray<Move> recentMoves;
@@ -142,6 +143,18 @@ namespace RPSLS
             {
                 return MoveToPlay(mostLikely);
             }
+            else if (moveCount >= 20 && (mostLikely = FindPattern()) != null)
+            {
+                return MoveToPlay(mostLikely);
+            }
+            else if (moveCount >= 30 && (mostLikely = FindPattern()) != null)
+            {
+                return MoveToPlay(mostLikely);
+            }
+            else if (moveCount >= MOVEBUFFERSIZE && (mostLikely = FindPattern()) != null)
+            {
+                return MoveToPlay(mostLikely);
+            }
 
             foreach (WinningScenario scenario in winningScenarios)
             {
@@ -172,19 +185,16 @@ namespace RPSLS
             for (int patternLength = SEARCHPATTERNSIZE; patternLength >= 2; patternLength--)    // itirate through assumed possible pattern lengths where 2 is the minimum pattern length
             {
                 int firstIndex = recentMoves.Newest - patternLength;    // if any of the starting indices are negative, wrap back the circular array
-                Console.WriteLine(firstIndex);
-                int secondIndex = firstIndex - patternLength;
-                Console.WriteLine(secondIndex);
                 if (firstIndex < 0) 
                 {
-                    firstIndex += recentMoves.Array.Length;
+                    firstIndex += recentMoves.Array.Length;     // wrap back first firstIndex in case it starts out as negative
                 }
+
+                int secondIndex = firstIndex - patternLength;
                 if (secondIndex < 0)
                 {
                     secondIndex += recentMoves.Array.Length;
                 }
-                Console.WriteLine(firstIndex);
-                Console.WriteLine(secondIndex);
 
                 bool isEqual = true;    // true when pattern is found
                 for (int i = 0; i < patternLength; i++)
@@ -199,8 +209,7 @@ namespace RPSLS
                     {
                         i2 -= recentMoves.Array.Length;
                     }
-
-                    Console.WriteLine($"i1: {i1}, i2: {i2}");
+                    //Console.WriteLine($"i1: {i1}, i2: {i2}");
 
                     if (recentMoves.Array[i1] != recentMoves.Array[i2])     // if any elements are not the same, then there is no pattern within that pattern length
                     {
@@ -215,6 +224,26 @@ namespace RPSLS
                 }
             }
             return null;    // no pattern found
+        }
+
+        /// <summary>
+        /// Find the opponent's favourite move based off the weighted average and probability of moves played
+        /// </summary>
+        private void FindFavourite(Move opponentMove)
+        {
+            WinningScenario favouriteMove = null;
+            if (moveCount >= 10)     // need to observe at least 10 moves and use the accumulated probabilities of the moves played
+            {
+                foreach (WinningScenario scenario in winningScenarios)
+                {
+                    if (favouriteMove == null || this.winningScenarios[(int)opponentMove].Probability < scenario.Probability)
+                    {
+                        favouriteMove = scenario;
+                        scenario.Weight = 0.15f;
+                    }
+                }
+                favouriteMove.Weight = 0.4f;
+            }
         }
 
     }
