@@ -1,1 +1,3 @@
-# Rock, Paper, Scissors, Lizard and Spock AI
+# RPSLS-AI
+
+Rock, Paper, Scissors, Lizard and Spock AI
